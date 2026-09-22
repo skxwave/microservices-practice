@@ -6,3 +6,6 @@ migrate:
 
 downgrade:
     uv run alembic downgrade -1
+
+dev:
+    uv run fastapi dev
