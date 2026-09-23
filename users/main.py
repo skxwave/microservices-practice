@@ -6,10 +6,10 @@ from fastapi import FastAPI, Depends, HTTPException, status
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from core import get_db
-from core.schemas import UserCreate, UserResponse
-from core.models import User
-from core.events import send_user_created_event
+from src import get_db
+from src.schemas import UserCreate, UserResponse
+from src.models import User
+from src.events import send_user_created_event
 
 load_dotenv()
 
@@ -104,3 +104,14 @@ async def create_user(
         first_name=new_user.first_name,
         last_name=new_user.last_name,
     )
+
+
+@app.post("/debug/user_create_event")
+async def debug_user_create_event(
+    user: UserCreate
+):
+    await send_user_created_event({
+        "username": user.username,
+        "email": user.email,
+    })
+    return {"details": "event sent"}

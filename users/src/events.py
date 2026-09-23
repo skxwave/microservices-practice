@@ -12,10 +12,10 @@ async def send_user_created_event(user_info: dict):
     await producer.start()
     try:
         message = {
+            "event_type": "UserCreated",
             "user": user_info,
-            "action": "created",
         }
-        await producer.send_and_wait("user.events", value=message)
+        await producer.send_and_wait("user.user-events.v1", value=message)
         print("Message send to kafka:", message)
     finally:
         await producer.stop()

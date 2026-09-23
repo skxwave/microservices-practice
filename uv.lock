@@ -5,6 +5,7 @@ requires-python = ">=3.14"
 [manifest]
 members = [
     "microservices-practice",
+    "notifications",
     "users",
 ]
 
@@ -484,6 +485,17 @@ wheels = [
 name = "microservices-practice"
 version = "0.1.0"
 source = { virtual = "." }
+
+[[package]]
+name = "notifications"
+version = "0.1.0"
+source = { virtual = "notifications" }
+dependencies = [
+    { name = "aiokafka" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "aiokafka", specifier = ">=0.14.0" }]
 
 [[package]]
 name = "packaging"
