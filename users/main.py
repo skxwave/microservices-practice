@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from core import get_db
 from core.schemas import UserCreate, UserResponse
 from core.models import User
+from core.events import send_user_created_event
 
 load_dotenv()
 
@@ -20,21 +21,21 @@ app = FastAPI(
 
 
 @app.get("/users", response_model=list[UserResponse])
-async def get_users(
-    db: Annotated[AsyncSession, Depends(get_db)]
-):
+async def get_users(db: Annotated[AsyncSession, Depends(get_db)]):
     users = await db.scalars(select(User))
     result = []
 
     for user in users:
-        result.append(UserResponse(
-            id=user.id,
-            username=user.username,
-            email=user.email,
-            first_name=user.first_name,
-            last_name=user.last_name,
-        ))
-    
+        result.append(
+            UserResponse(
+                id=user.id,
+                username=user.username,
+                email=user.email,
+                first_name=user.first_name,
+                last_name=user.last_name,
+            )
+        )
+
     return result
 
 
@@ -68,7 +69,9 @@ async def create_user(
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
     old_user = await db.scalar(
-        select(User).where(or_(User.username == user.username, User.email == user.email))
+        select(User).where(
+            or_(User.username == user.username, User.email == user.email)
+        )
     )
 
     if old_user:
@@ -87,10 +90,17 @@ async def create_user(
     db.add(new_user)
     await db.commit()
 
+    await send_user_created_event(
+        {
+            "username": new_user.username,
+            "email": new_user.email,
+        }
+    )
+
     return UserResponse(
-        id=user.id,
-        username=user.username,
-        email=user.email,
-        first_name=user.first_name,
-        last_name=user.last_name,
+        id=new_user.id,
+        username=new_user.username,
+        email=new_user.email,
+        first_name=new_user.first_name,
+        last_name=new_user.last_name,
     )
