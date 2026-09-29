@@ -1,0 +1,11 @@
+makemigration message:
+    uv run alembic revision --autogenerate -m "{{message}}"
+
+migrate:
+    uv run alembic upgrade head
+
+downgrade:
+    uv run alembic downgrade -1
+
+dev:
+    uv run fastapi dev
