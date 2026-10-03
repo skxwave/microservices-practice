@@ -10,12 +10,13 @@ from src import get_db
 from src.schemas import ProductCreate, ProductResponse, ProductUpdate
 from src.models import Product
 from src.events import send_product_created_event, send_product_updated_event
+from src.services.user_service import user_service, UserService
 
 load_dotenv()
 
 app = FastAPI(
-    title="Users service",
-    description="Microservice on FastAPI to manage users",
+    title="Products service",
+    description="Microservice on FastAPI to manage products",
     debug=os.getenv("DEBUG", True),
 )
 
@@ -42,8 +43,17 @@ async def get_products(db: Annotated[AsyncSession, Depends(get_db)]):
 @app.post("/products", response_model=ProductResponse)
 async def create_product(
     product_create: ProductCreate,
+    user_service: Annotated[UserService, Depends(user_service)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
+    user = await user_service.get_user(product_create.user_id)
+
+    if not user:
+        raise HTTPException(
+            detail="user not found",
+            status_code=status.HTTP_404_NOT_FOUND,
+        )
+    
     product = Product(
         user_id=product_create.user_id,  # TODO: change to real user
         title=product_create.title,
@@ -101,8 +111,17 @@ async def update_product(
     product_id: int,
     user_id: int,
     product_update: ProductUpdate,
+    user_service: Annotated[UserService, Depends(user_service)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
+    user = await user_service.get_user(user_id)
+
+    if not user:
+        raise HTTPException(
+            detail="user not found",
+            status_code=status.HTTP_404_NOT_FOUND,
+        )
+    
     product = await db.scalar(
         select(Product).where(
             Product.id == product_id,
@@ -110,7 +129,7 @@ async def update_product(
         ),
     )
 
-    if not product:
+    if not product or product.user_id != user.id:
         raise HTTPException(
             detail="product not found",
             status_code=status.HTTP_404_NOT_FOUND,

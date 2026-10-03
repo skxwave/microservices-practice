@@ -2,7 +2,10 @@ import asyncio
 import json
 from aiokafka import AIOKafkaConsumer
 
-TOPICS = ["user.user-events.v1"]
+TOPICS = [
+    "user.user-events.v1",
+    "product.product-events.v1",
+]
 
 
 async def process_message(payload: dict):
@@ -13,6 +16,12 @@ async def process_message(payload: dict):
         username = user_data.get("username")
         email = user_data.get("email")
         print(f"User '{username}':'{email}' created!")
+    if event_type == "ProductCreated":
+        product_data = payload.get("product")
+        title = product_data.get("title")
+        description = product_data.get("description")
+        price = product_data.get("price")
+        print(f"Product '{title}':'{description}:{price}' created!")
     else:
         print("Unknown event type")
 

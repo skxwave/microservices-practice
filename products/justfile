@@ -8,4 +8,4 @@ downgrade:
     uv run alembic downgrade -1
 
 dev:
-    uv run fastapi dev
+    uv run fastapi dev --port 8001
