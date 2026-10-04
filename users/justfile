@@ -10,8 +10,8 @@ downgrade:
 dev:
     uv run fastapi dev
 
-infra state="up -d":
-    docker-compose {{state}} db
+test:
+    uv run pytest
 
-run state="up -d":
-    docker-compose {{state}}
+lint:
+    uv run ruff check .
