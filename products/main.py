@@ -1,24 +1,41 @@
-import os
+from contextlib import asynccontextmanager
 from typing import Annotated
 
-from dotenv import load_dotenv
 from fastapi import FastAPI, Depends, HTTPException, status
-from sqlalchemy import and_, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src import get_db
+from src.config import settings
 from src.schemas import ProductCreate, ProductResponse, ProductUpdate
 from src.models import Product
-from src.events import send_product_created_event, send_product_updated_event
+from src.events import (
+    send_product_created_event,
+    send_product_updated_event,
+    start_producer,
+    stop_producer,
+)
 from src.services.user_service import user_service, UserService
 
-load_dotenv()
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await start_producer()
+    yield
+    await stop_producer()
+
 
 app = FastAPI(
     title="Products service",
     description="Microservice on FastAPI to manage products",
-    debug=os.getenv("DEBUG", True),
+    debug=settings.debug,
+    lifespan=lifespan,
 )
+
+
+@app.get("/health")
+async def health():
+    return {"status": "ok"}
 
 
 @app.get("/products", response_model=list[ProductResponse])

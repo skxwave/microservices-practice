@@ -1,15 +1,13 @@
-import os
 import httpx
-from dotenv import load_dotenv
+
+from src.config import settings
 
 from .user_dtos import UserDTO
-
-load_dotenv()
 
 
 class UserService:
     def __init__(self):
-        self.url = os.getenv("USER_SERVICE_URL")
+        self.url = settings.user_service_url
 
     async def get_user(self, user_id: int) -> UserDTO:
         async with httpx.AsyncClient() as client:
