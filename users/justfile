@@ -9,3 +9,9 @@ downgrade:
 
 dev:
     uv run fastapi dev
+
+infra state="up -d":
+    docker-compose {{state}} db
+
+run state="up -d":
+    docker-compose {{state}}

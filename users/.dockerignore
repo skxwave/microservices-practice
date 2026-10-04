@@ -1,1 +1,17 @@
-# TODO: fill ignore file
+**/.git
+**/.venv
+**/__pycache__
+**/*.pyc
+**/.env
+**/.env.*
+**/.idea
+**/.vscode
+**/.pytest_cache
+**/.ruff_cache
+**/.mypy_cache
+**/docker-compose*.yml
+**/Dockerfile
+**/.dockerignore
+**/justfile
+**/README.md
+infrastructure

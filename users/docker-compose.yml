@@ -1,7 +1,22 @@
 services:
-  # backend:
-  #   build: .
-  
+  backend:
+    build:
+      context: ..
+      dockerfile: users/Dockerfile
+    container_name: users_backend
+    restart: unless-stopped
+    environment:
+      DB_URL: postgresql+psycopg://root:root@users_db:5432/users
+      KAFKA_URL: kafka:9092
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - default
+      - app_network
+
   db:
     image: postgres:18-alpine
     container_name: users_db
@@ -19,6 +34,11 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+networks:
+  app_network:
+    name: microservices_network
+    external: true
 
 volumes:
   postgres_data:

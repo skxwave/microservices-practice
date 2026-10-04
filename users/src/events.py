@@ -1,12 +1,15 @@
+import os
 import json
+
 from aiokafka import AIOKafkaProducer
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
 async def send_user_created_event(user_info: dict):
-    # If local run — localhost:9094.
-    # If inside docker — kafka:9092.
     producer = AIOKafkaProducer(
-        bootstrap_servers="localhost:9094",
+        bootstrap_servers=os.getenv("KAFKA_URL"),
         value_serializer=lambda v: json.dumps(v).encode("utf-8"),
     )
     await producer.start()
