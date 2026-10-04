@@ -9,3 +9,9 @@ downgrade:
 
 dev:
     uv run fastapi dev --port 8001
+
+test:
+    uv run pytest
+
+lint:
+    uv run ruff check .
