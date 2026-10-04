@@ -1,5 +1,9 @@
 import asyncio
 import json
+import os
+import signal
+from contextlib import suppress
+
 from aiokafka import AIOKafkaConsumer
 
 TOPICS = [
@@ -16,7 +20,7 @@ async def process_message(payload: dict):
         username = user_data.get("username")
         email = user_data.get("email")
         print(f"User '{username}':'{email}' created!")
-    if event_type == "ProductCreated":
+    elif event_type == "ProductCreated":
         product_data = payload.get("product")
         title = product_data.get("title")
         description = product_data.get("description")
@@ -29,7 +33,7 @@ async def process_message(payload: dict):
 async def run_consumer():
     consumer = AIOKafkaConsumer(
         *TOPICS,
-        bootstrap_servers="localhost:9094",  # TODO: 9092 inside docker
+        bootstrap_servers=os.environ["KAFKA_BOOTSTRAP_SERVERS"],
         group_id="notifications-service-group",
         enable_auto_commit=False,
         auto_offset_reset="earliest",  # read from beginning, if group is new
@@ -56,5 +60,14 @@ async def run_consumer():
         await consumer.stop()
 
 
+async def main():
+    task = asyncio.create_task(run_consumer())
+    loop = asyncio.get_running_loop()
+    for sig in (signal.SIGINT, signal.SIGTERM):
+        loop.add_signal_handler(sig, task.cancel)
+    with suppress(asyncio.CancelledError):
+        await task
+
+
 if __name__ == "__main__":
-    asyncio.run(run_consumer())
+    asyncio.run(main())
