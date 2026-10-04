@@ -1,8 +1,10 @@
-FROM ghcr.io/astral-sh/uv:python3.14-bookworm-slim AS builder
+FROM python:3.14-slim AS builder
 
 ENV UV_COMPILE_BYTECODE=1 \
     UV_LINK_MODE=copy \
     UV_PYTHON_DOWNLOADS=never
+
+RUN pip install --no-cache-dir uv
 
 WORKDIR /app
 
@@ -30,5 +32,8 @@ COPY migrations migrations
 USER app
 
 EXPOSE 8000
+
+HEALTHCHECK --interval=10s --timeout=3s --start-period=10s --retries=5 \
+    CMD ["python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
 
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
