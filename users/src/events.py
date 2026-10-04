@@ -1,24 +1,29 @@
-import os
 import json
 
 from aiokafka import AIOKafkaProducer
-from dotenv import load_dotenv
 
-load_dotenv()
+from src.config import settings
+
+producer: AIOKafkaProducer | None = None
 
 
-async def send_user_created_event(user_info: dict):
+async def start_producer():
+    global producer
     producer = AIOKafkaProducer(
-        bootstrap_servers=os.getenv("KAFKA_URL"),
+        bootstrap_servers=settings.kafka_bootstrap_servers,
         value_serializer=lambda v: json.dumps(v).encode("utf-8"),
     )
     await producer.start()
-    try:
-        message = {
-            "event_type": "UserCreated",
-            "user": user_info,
-        }
-        await producer.send_and_wait("user.user-events.v1", value=message)
-        print("Message send to kafka:", message)
-    finally:
-        await producer.stop()
+
+
+async def stop_producer():
+    await producer.stop()
+
+
+async def send_user_created_event(user_info: dict):
+    message = {
+        "event_type": "UserCreated",
+        "user": user_info,
+    }
+    await producer.send_and_wait("user.user-events.v1", value=message)
+    print("Message send to kafka:", message)
