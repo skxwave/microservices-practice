@@ -1,0 +1,143 @@
+name: microservices
+
+x-kafka-env: &kafka-env
+  KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+
+x-users-env: &users-env
+  <<: *kafka-env
+  DB_URL: postgresql+psycopg://${USERS_DB_USER}:${USERS_DB_PASSWORD}@users-db:5432/users
+
+x-products-env: &products-env
+  <<: *kafka-env
+  DB_URL: postgresql+psycopg://${PRODUCTS_DB_USER}:${PRODUCTS_DB_PASSWORD}@products-db:5432/products
+  USER_SERVICE_URL: http://users:8000
+
+services:
+  nginx:
+    image: nginx:1.28-alpine
+    restart: unless-stopped
+    ports:
+      - "${GATEWAY_PORT:-80}:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost/health > /dev/null"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    depends_on:
+      users:
+        condition: service_healthy
+      products:
+        condition: service_healthy
+
+  kafka:
+    image: apache/kafka:3.9.1
+    restart: unless-stopped
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093,EXTERNAL://0.0.0.0:9094
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,EXTERNAL://localhost:9094
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 > /dev/null"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 20s
+
+  users-db:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${USERS_DB_USER}
+      POSTGRES_PASSWORD: ${USERS_DB_PASSWORD:?set USERS_DB_PASSWORD}
+      POSTGRES_DB: users
+    volumes:
+      - users_db_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d users"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  products-db:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${PRODUCTS_DB_USER}
+      POSTGRES_PASSWORD: ${PRODUCTS_DB_PASSWORD:?set PRODUCTS_DB_PASSWORD}
+      POSTGRES_DB: products
+    volumes:
+      - products_db_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d products"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  users-migrate:
+    build: ../users
+    image: microservices/users
+    command: ["alembic", "upgrade", "head"]
+    environment: *users-env
+    depends_on:
+      users-db:
+        condition: service_healthy
+
+  users:
+    build: ../users
+    image: microservices/users
+    restart: unless-stopped
+    environment: *users-env
+    depends_on:
+      users-migrate:
+        condition: service_completed_successfully
+      kafka:
+        condition: service_healthy
+
+  products-migrate:
+    build: ../products
+    image: microservices/products
+    command: ["alembic", "upgrade", "head"]
+    environment: *products-env
+    depends_on:
+      products-db:
+        condition: service_healthy
+
+  products:
+    build: ../products
+    image: microservices/products
+    restart: unless-stopped
+    environment: *products-env
+    depends_on:
+      products-migrate:
+        condition: service_completed_successfully
+      kafka:
+        condition: service_healthy
+      users:
+        condition: service_healthy
+
+  notifications:
+    build: ../notifications
+    image: microservices/notifications
+    restart: unless-stopped
+    environment: *kafka-env
+    depends_on:
+      kafka:
+        condition: service_healthy
+
+volumes:
+  kafka_data:
+  users_db_data:
+  products_db_data:

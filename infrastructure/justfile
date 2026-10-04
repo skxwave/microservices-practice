@@ -1,0 +1,35 @@
+dev := "docker compose -f docker-compose.yml -f docker-compose.dev.yml"
+prod := "docker compose -f docker-compose.yml"
+
+env:
+    test -f .env || cp .env.template .env
+
+up: env
+    {{dev}} up -d --build
+
+infra: env
+    {{dev}} up -d kafka kafka-ui users-db products-db
+
+infra-down:
+    {{dev}} stop kafka kafka-ui users-db products-db
+
+prod-up: env
+    {{prod}} up -d --build
+
+down:
+    {{dev}} down
+
+reset:
+    {{dev}} down -v
+
+build: env
+    {{dev}} build
+
+logs *svc:
+    {{dev}} logs -f {{svc}}
+
+ps:
+    {{dev}} ps
+
+migrate svc:
+    {{dev}} run --rm {{svc}}-migrate
