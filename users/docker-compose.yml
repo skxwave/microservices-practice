@@ -1,8 +1,6 @@
 services:
   backend:
-    build:
-      context: ..
-      dockerfile: users/Dockerfile
+    build: .
     container_name: users_backend
     restart: unless-stopped
     environment:

@@ -1,7 +1,20 @@
 services:
-  # backend:
-  #   build: .
-  
+  backend:
+    build: .
+    container_name: products_backend
+    restart: unless-stopped
+    environment:
+      DB_URL: postgresql+psycopg://root:root@products_db:5432/products
+      USER_SERVICE_URL: http://users_backend:8000
+    ports:
+      - "8001:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - default
+      - app_network
+
   db:
     image: postgres:18-alpine
     container_name: products_db
@@ -19,6 +32,11 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+networks:
+  app_network:
+    name: microservices_network
+    external: true
 
 volumes:
   postgres_data:
