@@ -19,6 +19,10 @@ services:
     ports:
       - "5432:5432"
 
+  users-redis:
+    ports:
+      - "6379:6379"
+
   products-db:
     ports:
       - "5433:5432"

@@ -8,10 +8,10 @@ up: env
     {{dev}} up -d --build
 
 infra: env
-    {{dev}} up -d kafka kafka-ui users-db products-db
+    {{dev}} up -d kafka kafka-ui users-db users-redis products-db
 
 infra-down:
-    {{dev}} stop kafka kafka-ui users-db products-db
+    {{dev}} stop kafka kafka-ui users-db users-redis products-db
 
 prod-up: env
     {{prod}} up -d --build

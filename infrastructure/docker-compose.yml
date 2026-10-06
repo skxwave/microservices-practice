@@ -5,6 +5,8 @@ x-kafka-env: &kafka-env
 
 x-users-env: &users-env
   <<: *kafka-env
+  REDIS_URL: redis://users-redis:6379/0
+  JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET}
   DB_URL: postgresql+psycopg://${USERS_DB_USER}:${USERS_DB_PASSWORD}@users-db:5432/users
 
 x-products-env: &products-env
@@ -86,6 +88,15 @@ services:
       timeout: 5s
       retries: 10
 
+  users-redis:
+    image: redis:8-alpine
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
   users-migrate:
     build: ../users
     image: microservices/users
@@ -103,6 +114,8 @@ services:
     depends_on:
       users-migrate:
         condition: service_completed_successfully
+      users-redis:
+        condition: service_healthy
       kafka:
         condition: service_healthy
 
