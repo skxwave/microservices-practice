@@ -1,0 +1,12 @@
+{
+  "folders": [
+    { "name": "users", "path": "users" },
+    { "name": "products", "path": "products" },
+    { "name": "notifications", "path": "notifications" },
+    { "name": "infrastructure", "path": "infrastructure" },
+    { "name": "root", "path": "." }
+  ],
+  "settings": {
+    "files.exclude": { "users": true, "products": true, "notifications": true, "infrastructure": true }
+  }
+}
