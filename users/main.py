@@ -103,7 +103,11 @@ async def get_users(db: Annotated[AsyncSession, Depends(get_db)]):
     return result
 
 
-@app.get("/users/{user_id}", response_model=UserResponse)
+@app.get(
+    "/users/{user_id}",
+    response_model=UserResponse,
+    dependencies=[Depends(get_current_user)],
+)
 async def get_user(
     user_id: int,
     db: Annotated[AsyncSession, Depends(get_db)],
@@ -172,11 +176,11 @@ async def create_user(
 
 
 @app.post("/debug/user_create_event")
-async def debug_user_create_event(
-    user: UserCreate
-):
-    await send_user_created_event({
-        "username": user.username,
-        "email": user.email,
-    })
+async def debug_user_create_event(user: UserCreate):
+    await send_user_created_event(
+        {
+            "username": user.username,
+            "email": user.email,
+        }
+    )
     return {"details": "event sent"}

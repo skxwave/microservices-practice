@@ -3,7 +3,7 @@ from unittest.mock import MagicMock
 
 import jwt
 
-from src.auth import ALGORITHM, _hasher
+from src.auth import _hasher
 from src.config import settings
 
 PASSWORD = "correct-horse"
@@ -36,7 +36,7 @@ def bearer(token):
 async def test_login_success(client, db, redis):
     tokens = await login(client, db, redis)
 
-    claims = jwt.decode(tokens["access_token"], settings.jwt_secret, [ALGORITHM])
+    claims = jwt.decode(tokens["access_token"], settings.jwt_secret, [settings.jwt_algorithm])
     assert claims["sub"] == "1"
     assert claims["type"] == "access"
 
@@ -90,7 +90,7 @@ async def test_expired_token_rejected(client, db, redis):
     token = jwt.encode(
         {"sub": "1", "jti": "x", "type": "access", "iat": now - 100, "exp": now - 10},
         settings.jwt_secret,
-        algorithm=ALGORITHM,
+        algorithm=settings.jwt_algorithm,
     )
 
     response = await client.get("/users/me", headers=bearer(token))
@@ -103,7 +103,7 @@ async def test_token_signed_with_other_secret_rejected(client, db, redis):
     token = jwt.encode(
         {"sub": "1", "jti": "x", "type": "access", "iat": now, "exp": now + 100},
         "another-secret-another-secret-123",
-        algorithm=ALGORITHM,
+        algorithm=settings.jwt_algorithm,
     )
 
     response = await client.get("/users/me", headers=bearer(token))
