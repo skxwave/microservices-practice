@@ -10,7 +10,7 @@ up: env
 infra: env
     {{dev}} up -d kafka kafka-ui users-db users-redis products-db
 
-infra-down:
+infra-stop:
     {{dev}} stop kafka kafka-ui users-db users-redis products-db
 
 prod-up: env
