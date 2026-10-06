@@ -22,11 +22,18 @@ class User(Base):
         nullable=False,
         index=True,
     )
-    first_name: Mapped[str] = mapped_column(String(64))
-    last_name: Mapped[str] = mapped_column(String(64))
+    first_name: Mapped[str | None] = mapped_column(
+        String(64),
+        nullable=True,
+    )
+    last_name: Mapped[str | None] = mapped_column(
+        String(64),
+        nullable=True,
+    )
+    password_hash: Mapped[str] = mapped_column(String(256))
 
     @validates("email")
     def validate_email(self, key, address):
         if "@" not in address:
             raise ValueError("Failed simple email validation: missing '@'")
-        return address.lower() # Normalize to lowercase
+        return address.lower()  # Normalize to lowercase

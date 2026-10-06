@@ -7,15 +7,33 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src import get_db
 from src.config import settings
-from src.schemas import UserCreate, UserResponse
+from src.auth import (
+    AuthService,
+    get_access_payload,
+    get_auth_service,
+    get_current_user,
+    hash_password,
+)
+from src.schemas import (
+    LoginRequest,
+    RefreshRequest,
+    TokenPair,
+    TokenPayload,
+    UserCreate,
+    UserRegister,
+    UserResponse,
+)
 from src.models import User
 from src.events import send_user_created_event, start_producer, stop_producer
+from src.redis_client import start_redis, stop_redis
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await start_producer()
+    await start_redis()
     yield
+    await stop_redis()
     await stop_producer()
 
 
@@ -32,7 +50,41 @@ async def health():
     return {"status": "ok"}
 
 
-@app.get("/users", response_model=list[UserResponse])
+@app.post("/auth/login", response_model=TokenPair)
+async def login(
+    credentials: LoginRequest,
+    auth: Annotated[AuthService, Depends(get_auth_service)],
+):
+    return await auth.login(credentials.username, credentials.password)
+
+
+@app.post("/auth/refresh", response_model=TokenPair)
+async def refresh(
+    body: RefreshRequest,
+    auth: Annotated[AuthService, Depends(get_auth_service)],
+):
+    return await auth.refresh(body.refresh_token)
+
+
+@app.post("/auth/logout", status_code=status.HTTP_204_NO_CONTENT)
+async def logout(
+    body: RefreshRequest,
+    access: Annotated[TokenPayload, Depends(get_access_payload)],
+    auth: Annotated[AuthService, Depends(get_auth_service)],
+):
+    await auth.logout(access, body.refresh_token)
+
+
+@app.get("/users/me", response_model=UserResponse)
+async def get_me(user: Annotated[User, Depends(get_current_user)]):
+    return UserResponse.model_validate(user, from_attributes=True)
+
+
+@app.get(
+    "/users",
+    response_model=list[UserResponse],
+    dependencies=[Depends(get_current_user)],
+)
 async def get_users(db: Annotated[AsyncSession, Depends(get_db)]):
     users = await db.scalars(select(User))
     result = []
@@ -77,7 +129,7 @@ async def get_user(
 
 @app.post("/users", response_model=UserResponse)
 async def create_user(
-    user: UserCreate,
+    user: UserRegister,
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
     old_user = await db.scalar(
@@ -97,6 +149,7 @@ async def create_user(
         email=user.email,
         first_name=user.first_name,
         last_name=user.last_name,
+        password_hash=await hash_password(user.password),
     )
 
     db.add(new_user)

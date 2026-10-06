@@ -7,6 +7,7 @@ x-users-env: &users-env
   <<: *kafka-env
   REDIS_URL: redis://users-redis:6379/0
   JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET}
+  JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
   DB_URL: postgresql+psycopg://${USERS_DB_USER}:${USERS_DB_PASSWORD}@users-db:5432/users
 
 x-products-env: &products-env
